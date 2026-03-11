@@ -2,40 +2,38 @@ import argparse
 import json
 import os
 
+vault_file = "./data/vault_example.json"
 
-def load_vault(filename='./data/vault_example.json'):
+
+def load_vault():
     try:
-        with open(filename, 'r') as f:
+        with open(vault_file, 'r') as f:
             vault_data = json.load(f)
     except json.JSONDecodeError:
-        if os.path.getsize(filename) == 0:
-            print("Vault is Empty!")
-            return
+        if os.path.getsize(vault_file) == 0:
+            return dict()
         else:
             print("Vault file corrupted")
             return
     except FileNotFoundError:
-        print("Vault is Empty!")
-        return
+        return dict()
     return vault_data
 
 
-def store_cred(service, username, password, filename='./data/vault_example.json'):
+def store_cred(service, username, password):
     data = load_vault()
-    if data is None:
-        data = {}
-
-    data[service] = {
-        "username": username, 
-        "password": password
-    }
-
-    with open(filename, 'w') as f:
-        json.dump(data, f, indent=4)
+    if data is not None:
+        data[service] = {
+            "username": username, 
+            "password": password
+        }
+        os.makedirs("data", exist_ok=True)
+        with open(vault_file, 'w') as f:
+            json.dump(data, f, indent=4)
 
 
 
-def get_cred(service, filename='./data/vault_example.json'):
+def get_cred(service):
     vault = load_vault()
     if vault is not None:
         if service in vault:
@@ -46,12 +44,15 @@ def get_cred(service, filename='./data/vault_example.json'):
 
 
 
-def get_list(filename='./data/vault_example.json'):
+def get_list():
     data = load_vault()
     if data is not None:
-        print("Stored Services" + '\n')
-        for el in data:
-            print(el)
+        if len(data) == 0:
+            print("No Services stored")
+        else:
+            print("Stored Services" + '\n')
+            for service in data:
+                print(service)
 
 
 
