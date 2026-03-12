@@ -1,8 +1,13 @@
 import argparse
 import json
 import os
+import getpass
+import sys
+import hashlib
+
 
 vault_file = "./data/vault_example.json"
+password_file = "./data/master.hash"
 
 
 def load_vault():
@@ -20,16 +25,43 @@ def load_vault():
     return vault_data
 
 
+
+def authenticate_user():
+    input_pass = getpass.getpass("Enter Master Password: ")
+    h = hashlib.sha256()
+    h.update(input_pass.encode('utf-8'))
+    os.makedirs("data", exist_ok=True)
+    if os.path.exists(password_file) and os.path.getsize(password_file) > 0:
+        with open(password_file, "r") as f:
+            master_pass = f.read()
+        if master_pass != h.hexdigest():
+            sys.exit("Incorrect Password")
+    else:
+        with open(password_file, 'w') as f:
+            f.write(h.hexdigest())
+        print("Master password set successfully")
+
+
+
+
 def store_cred(service, username, password):
     data = load_vault()
     if data is not None:
+        os.makedirs("data", exist_ok=True)
+
+        if service in data:
+            ans = input("Service already exists. Overwrite? (y/n):").lower()
+            if ans in ['n','no']:
+                print("Operation Cancelled")
+                return
+                
         data[service] = {
             "username": username, 
             "password": password
         }
-        os.makedirs("data", exist_ok=True)
         with open(vault_file, 'w') as f:
             json.dump(data, f, indent=4)
+        print("Credentials stored successfully")
 
 
 
@@ -71,12 +103,14 @@ parser_list = subparser.add_parser('list', help="Get a list of Services")
 parser_add.add_argument('service', type=str, help="Name of The Service")
 parser_get.add_argument('service', type=str, help="Name of The Service")
 
-args = parser.parse_args()
 
+authenticate_user()
+
+args = parser.parse_args()
 
 if args.command == 'add':
     username = input("Username: ")
-    password = input("Password: ")
+    password = getpass.getpass("Password: ")
 
     store_cred(args.service, username, password)
 elif args.command == 'get':
